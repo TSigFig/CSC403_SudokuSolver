@@ -1,8 +1,8 @@
 package TermProject;
 import stdlib.*;
 import algs13.Stack;
-import java.util.HashSet;
-import java.util.Arrays;
+
+import java.util.*;
 
 public class SudokuSolver {
 
@@ -20,18 +20,32 @@ public class SudokuSolver {
         return ((row / BOX_SIZE) * BOX_SIZE) + (col / BOX_SIZE);
     }
 
+    // Returns 2d array index from flatten index
+    private int[] getUnflattenIndex(int index) {
+        int row = index / BOARD_SIZE;
+        int col = index % BOARD_SIZE;
+        return new int[] { row, col };
+    }
+
+    // Returns array index from 2d array position
+    private int getFlatIndex(int row, int col) {
+        return row * BOARD_SIZE + col;
+    }
+
     // Deletes number at sudokuBoard[row, col] from sets and resets board to 0
-    private void deleteNumberFromSets(int row, int col) {
+    private void deleteNumberFromSets(int[][] board, int row, int col) {
         // Get value at position
-        int delNum = sudokuBoard[row][col];
+        int delNum = board[row][col];
 
-        // Remove value from sets
-        rowSets[row].remove(delNum);
-        columnSets[col].remove(delNum);
-        boxSets[getBoxIndex(row, col)].remove(delNum);
+        if (delNum > 0) {
+            // Remove value from sets
+            rowSets[row].remove(delNum);
+            columnSets[col].remove(delNum);
+            boxSets[getBoxIndex(row, col)].remove(delNum);
 
-        // Reset value at position
-        sudokuBoard[row][col] = 0;
+            // Reset value at position
+            board[row][col] = 0;
+        }
 
         // StdOut.format("Removed: %d from sudokuBoard[%d, %d]", delNum, row, col);
     }
@@ -55,47 +69,51 @@ public class SudokuSolver {
     }
 
     // Puzzle solver function using backtracking method with a stack
-    public void solvePuzzle() {
+    public void solvePuzzle(int[][] board) {
         // Reset stack
         backtrackStack = new Stack<>();
 
         // StdOut.println("Starting Puzzle");
 
         // Initialize local position and starting number outside of while loop
-        int[] rowCol = findNextZero(0, 0);
+        int[] rowCol = findNextZero(board,0, 0);
         int startingNumber = 0;
+        int row;
+        int col;
 
         while (rowCol != null) {
+            row = rowCol[0];
+            col = rowCol[1];
             // Find answer for empty cell
-            int answer = findAnswer(rowCol[0], rowCol[1], startingNumber);
+            int answer = findAnswer(row, col, startingNumber);
 
             if (answer > 0) {
                 // Update solution to the board
-                sudokuBoard[rowCol[0]][rowCol[1]] = answer;
+                board[row][col] = answer;
                 // Add solution to sets
-                rowSets[rowCol[0]].add(answer);
-                columnSets[rowCol[1]].add(answer);
-                boxSets[getBoxIndex(rowCol[0], rowCol[1])].add(answer);
+                rowSets[row].add(answer);
+                columnSets[col].add(answer);
+                boxSets[getBoxIndex(row, col)].add(answer);
                 // Push solution onto the stack
-                backtrackStack.push(new int[] {rowCol[0], rowCol[1]});
+                backtrackStack.push(new int[] {row, col});
 
                 // Update rowCol to next empty cell position and reset startingNumber to 0
-                rowCol  = findNextZero(rowCol[0], rowCol[1]);
+                rowCol  = findNextZero(board, row, col);
                 startingNumber = 0;
             }
             else if (answer == 0) {
                 // findAnswer didn't find a possible solution
                 // Update board to 0 in case there was an answer there before
-                if (sudokuBoard[rowCol[0]][rowCol[1]] != 0) {
-                    deleteNumberFromSets(rowCol[0], rowCol[1]);
+                if (board[row][col] != 0) {
+                    deleteNumberFromSets(board, row, col);
                 }
 
                 // Get last solution position
                 rowCol = backtrackStack.pop();
                 // Update startingNumber to last answer
-                startingNumber = sudokuBoard[rowCol[0]][rowCol[1]];
+                startingNumber = board[rowCol[0]][rowCol[1]];
                 // Remove last solution from sets
-                deleteNumberFromSets(rowCol[0], rowCol[1]);
+                deleteNumberFromSets(board, rowCol[0], rowCol[1]);
             }
         }
         //StdOut.println("Finished Puzzle");
@@ -116,14 +134,14 @@ public class SudokuSolver {
     }
 
     // Returns position of next "zero"/empty cell in sudokuBoard
-    private int[] findNextZero(int startRow, int startCol) {
+    private int[] findNextZero(int[][] board, int startRow, int startCol) {
         for (int row = startRow; row < BOARD_SIZE; row++) {
             // Starts at startCol only on the first startRow iteration, otherwise it goes back to 0
             if (row != startRow) {
                 startCol = 0;
             }
             for (int col = startCol; col < BOARD_SIZE; col++) {
-                if (sudokuBoard[row][col] == 0) {
+                if (board[row][col] == 0) {
                     //StdOut.format("Next empty cell found at: sudokuBoard[%d, %d]\n", row, col);
                     return new int[] {row, col};
                 }
@@ -208,14 +226,135 @@ public class SudokuSolver {
     }
 
     // Print full sudokuBoard
-    public void printSudokuBoard() {
+    public void printSudokuBoard(int[][] board) {
         StdOut.println("Here's the sudoku board: ");
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            for (int j = 0; j < BOARD_SIZE; j++) {
-                StdOut.format("%d ", sudokuBoard[i][j]);
+        for (int i = 0; i < board.length; i++) {
+            for (int j = 0; j < board[i].length; j++) {
+                StdOut.format("%d ", board[i][j]);
             }
             StdOut.println();
         }
+    }
+
+    // Function return count of unique solutions for the puzzle
+    public int countUniqueSolutions(int[][] board) {
+        // Reset stack
+        backtrackStack = new Stack<>();
+
+        // Initialize local position and starting number outside of while loop
+        int[] rowCol = findNextZero(board,0, 0);
+        int startingNumber = 0;
+        int solutionCount = 0;
+        int row;
+        int col;
+
+        while (rowCol != null) {
+            row = rowCol[0];
+            col = rowCol[1];
+            // Find answer for empty cell
+            int answer = findAnswer(row, col, startingNumber);
+
+            if (answer > 0) {
+                // Update solution to the board
+                board[row][col] = answer;
+                // Add solution to sets
+                rowSets[row].add(answer);
+                columnSets[col].add(answer);
+                boxSets[getBoxIndex(row, col)].add(answer);
+                // Push solution onto the stack
+                backtrackStack.push(new int[] {row, col});
+
+                // Update rowCol to next empty cell position and reset startingNumber to 0
+                rowCol  = findNextZero(board, row, col);
+                startingNumber = 0;
+
+                // Check if puzzle is solved
+                if (rowCol == null) {
+                    //printSudokuBoard(board);
+                    solutionCount++;
+                    StdOut.format("Solution found: %d\n", solutionCount);
+                    if (solutionCount > 1) {
+                        return solutionCount;
+                    }
+                    // Backtrack and search for another solution
+                    rowCol = backtrackStack.pop();
+                    row = rowCol[0];
+                    col = rowCol[1];
+                    startingNumber = board[row][col];
+                    deleteNumberFromSets(board, row, col);
+                }
+            }
+            else if (answer == 0) {
+                // findAnswer didn't find a possible solution
+                // Update board to 0 in case there was an answer there before
+                deleteNumberFromSets(board, row, col);
+
+                if (!backtrackStack.isEmpty()) {
+                    // Get last solution position
+                    rowCol = backtrackStack.pop();
+                    // Update startingNumber to last answer
+                    startingNumber = board[rowCol[0]][rowCol[1]];
+                    // Remove last solution from sets
+                    deleteNumberFromSets(board, rowCol[0], rowCol[1]);
+                } else {
+                    //StdOut.println("Break");
+                    break;
+                }
+            }
+        }
+        return solutionCount;
+    }
+
+    private int[][] deepCopyBoard(int[][] original) {
+        int[][] copy = new int[original.length][original[0].length];
+        for (int i = 0; i < original.length; i++) {
+            System.arraycopy(original[i], 0, copy[i], 0, original[i].length);
+        }
+        return copy;
+    }
+
+    private int findRandomAnswer(int row, int col) {
+        Random rand = new Random();
+        List<Integer> possibleAnswers = new ArrayList<>();
+        for (int i = 1; i <= BOARD_SIZE; i++) {
+            if (!rowSets[row].contains(i) && !columnSets[col].contains(i) && !boxSets[getBoxIndex(row, col)].contains(i)) {
+                possibleAnswers.add(i);
+            }
+        }
+        if (possibleAnswers.isEmpty()) return 0;
+        return possibleAnswers.get(rand.nextInt(possibleAnswers.size()));
+    }
+
+    private void testingSolutionCounts() {
+        int [][] board = new int[][] {
+                {8, 0, 0, 0, 0, 9, 1, 0, 0},
+                {0, 9, 7, 0, 0, 1, 0, 5, 0},
+                {4, 0, 0, 2, 5, 0, 0, 7, 3},
+                {9, 0, 0, 0, 6, 3, 0, 8, 0},
+                {0, 7, 4, 0, 0, 0, 3, 6, 0},
+                {0, 8, 0, 4, 9, 0, 0, 0, 1},
+                {2, 4, 0, 0, 8, 5, 0, 0, 7},
+                {0, 3, 0, 9, 0, 0, 4, 1, 0},
+                {0, 0, 5, 3, 0, 0, 0, 0, 8}};
+        checkIfValidBoard(board);
+        int solution = countUniqueSolutions(board);
+        StdOut.format("Solutions: %d\n", solution);
+        board = new int[][] {
+                {0, 1, 0, 4, 0, 5, 0, 0, 0},
+                {9, 0, 3, 0, 0, 0, 8, 0, 0},
+                {4, 0, 0, 0, 7, 0, 0, 1, 3},
+                {0, 0, 4, 5, 6, 0, 3, 0, 0},
+                {1, 6, 0, 0, 0, 0, 0, 8, 5},
+                {0, 0, 5, 0, 8, 2, 6, 0, 0},
+                {6, 2, 0, 0, 5, 0, 0, 0, 8},
+                {0, 0, 1, 0, 0, 0, 5, 0, 2},
+                {0, 0, 0, 9, 0, 8, 0, 3, 0}};
+        checkIfValidBoard(board);
+        solution = countUniqueSolutions(board);
+        StdOut.format("Solutions: %d\n", solution);
+        //StdOut.println("Generating random unique board");
+        //generateRandomSolution();
+
     }
 
     public static void main (String[] args) {
@@ -223,6 +362,8 @@ public class SudokuSolver {
         sudokuSolver.initializeHashSets();
         sudokuSolver.testingPuzzles();
         sudokuSolver.testingCustomPuzzles();
+        // FINISHED EVERYTHING ABOVE | NOW TESTING GENERATION BELOW
+        sudokuSolver.testingSolutionCounts();
     }
 
     // Function that sends starting board and the answer to the test function
@@ -467,9 +608,9 @@ public class SudokuSolver {
     // Function that takes the starting sudoku board and checks if my application gets the right answer. Print's if it fails
     private void testPuzzle(int[][] startBoard, int[][] expectedBoard) {
         checkIfValidBoard(startBoard);
-        sudokuBoard = startBoard;
         //addBoardToHashSets(startBoard);
-        solvePuzzle();
+        solvePuzzle(startBoard);
+        sudokuBoard = startBoard;
         if (!Arrays.deepEquals(expectedBoard, sudokuBoard)) {
             StdOut.format("Failed Puzzle: Expecting (%s), Actual (%s)\n", Arrays.deepToString(expectedBoard), Arrays.deepToString(sudokuBoard));
         }
@@ -574,8 +715,8 @@ public class SudokuSolver {
     private void testCustomStringPuzzle(String[][] input, int[][] expectedBoard) {
         int[][] parsedInput = parseCustomBoard(input);
         checkIfValidBoard(parsedInput);
+        solvePuzzle(parsedInput);
         sudokuBoard = parsedInput;
-        solvePuzzle();
         if (!Arrays.deepEquals(expectedBoard, sudokuBoard)) {
             StdOut.format("Failed Puzzle: Expecting (%s), Actual (%s)\n", Arrays.deepToString(expectedBoard), Arrays.deepToString(sudokuBoard));
         }
@@ -679,3 +820,108 @@ public class SudokuSolver {
 //        }
 //    }
 //}
+
+
+// Function that returns a stack filled with random indices through
+//    private Stack<Integer> randomIndexStack() {
+//        int[] flatIndices = new int[BOARD_SIZE * BOARD_SIZE];
+//        int length = flatIndices.length;
+//
+//        // Fill the array with every index
+//        for (int i = 0; i < length; i++) {
+//            flatIndices[i] = i;
+//        }
+//
+//        // Randomize the indices within the array
+//        shuffle(flatIndices);
+////        for (int i = 0; i < length; i++) {
+////            StdOut.format("%d ", flatIndices[i]);
+////        }
+//        Stack<Integer> indexStack = new Stack<>();
+//        Random rand = new Random();
+//        for (int i = 0, j = length - 1; i < j; i++, j--) {
+//            int randomNumber = rand.nextInt();
+//            if (randomNumber % 2 == 0) {
+//                indexStack.push(flatIndices[i]);
+//                indexStack.push(flatIndices[j]);
+//            }
+//            else {
+//                indexStack.push(flatIndices[j]);
+//                indexStack.push(flatIndices[i]);
+//            }
+//            //StdOut.format("i = %d, j = %d\n", i, j);
+//        }
+//        if (length % 2 != 0) {
+//            // length is odd, so we didn't add the middle index to the stack
+//            int middle = length / 2;
+//            //StdOut.format("Length is %d, middle is %d", length, middle);
+//            indexStack.push(flatIndices[middle]);
+//        }
+//        //StdOut.format("Stack size = %d, array size = %d", indexStack.size(), length);
+//        return indexStack;
+//    }
+//
+//    /**
+//     * Code from method java.util.Collections.shuffle();
+//     */
+//    private void shuffle(int[] array) {
+//        Random random = new Random();
+//        int count = array.length;
+//        for (int i = count; i > 1; i--) {
+//            swap(array, i - 1, random.nextInt(i));
+//        }
+//    }
+//    private void swap(int[] array, int i, int j) {
+//        int temp = array[i];
+//        array[i] = array[j];
+//        array[j] = temp;
+//    }
+
+// Generates a random unique final board
+//    private void generateRandomSolution() {
+//        int[][] board = new int[BOARD_SIZE][BOARD_SIZE];
+//
+//        Stack<Integer> randomIndex = randomIndexStack();
+//
+//        int[] rowCol = getUnflattenIndex(randomIndex.pop());
+//        int row;
+//        int col;
+//        int solutionCount;
+//        int[][] startBoard;
+//        int popCount = 0;
+//
+//        while (true) {
+//            row = rowCol[0];
+//            col = rowCol[1];
+//            checkIfValidBoard(board);
+//
+//            int answer = findRandomAnswer(row, col);
+//
+//            if (answer > 0) {
+//                // Add solution to board
+//                board[row][col] = answer;
+//                // Add solution to sets
+//                rowSets[row].add(answer);
+//                columnSets[col].add(answer);
+//                boxSets[getBoxIndex(row, col)].add(answer);
+//
+//                startBoard = deepCopyBoard(board);
+//                StdOut.println("Start board");
+//                //printSudokuBoard(startBoard);
+//                solutionCount = countUniqueSolutions(board);
+//                StdOut.format("solutionCount: %d\n", solutionCount);
+//                board = deepCopyBoard(startBoard);
+//                if (solutionCount == 1) {
+//                    break;
+//                }
+//            }
+//            if (!randomIndex.isEmpty()) {
+//                rowCol = getUnflattenIndex(randomIndex.pop());
+//            }
+//            else {
+//                StdOut.println("Break");
+//                break;
+//            }
+//        }
+//        printSudokuBoard(board);
+//    }
