@@ -270,9 +270,8 @@ public class SudokuSolver {
 
                 // Check if puzzle is solved
                 if (rowCol == null) {
-                    //printSudokuBoard(board);
                     solutionCount++;
-                    StdOut.format("Solution found: %d\n", solutionCount);
+                    //StdOut.format("Solution found: %d\n", solutionCount);
                     if (solutionCount > 1) {
                         return solutionCount;
                     }
@@ -305,6 +304,86 @@ public class SudokuSolver {
         return solutionCount;
     }
 
+    // Generates a random unique starting board
+    private int[][] generateRandomPuzzle() {
+        // Initialize and fill the board with zeroes
+        int[][] board = new int[BOARD_SIZE][BOARD_SIZE];
+
+        // Failsafe in case the board doesn't generate a unique solution from the random indices list, so we keep a stack of failed indices
+        Stack<Integer> btStack = new Stack<>();
+
+        // Random shuffled list all cells on a board
+        List<Integer> randomIndex = shuffleBoardHelper();
+        int[] rowCol = getUnflattenIndex(findRandomCell(randomIndex));
+        int row;
+        int col;
+        int solutionCount;
+        int[][] startBoard;
+
+        while (true) {
+            row = rowCol[0];
+            col = rowCol[1];
+
+            // This keeps removing the hashsets and adding the current start board to the hash sets
+            checkIfValidBoard(board);
+
+            int answer = findRandomAnswer(row, col);
+
+            if (answer > 0) {
+                // Add solution to board
+                board[row][col] = answer;
+                // Add solution to sets
+                rowSets[row].add(answer);
+                columnSets[col].add(answer);
+                boxSets[getBoxIndex(row, col)].add(answer);
+
+                // Copy the original state of the board before sending off to be solved
+                startBoard = deepCopyBoard(board);
+
+                solutionCount = countUniqueSolutions(board);
+                //StdOut.format("solutionCount: %d\n", solutionCount);
+
+                // Reset the board back to the original state
+                board = deepCopyBoard(startBoard);
+                if (solutionCount == 1) {
+                    break;
+                } else if (solutionCount == 0) {
+                    // Recent addition made it so the puzzle has no solutions
+                    // Remove the answer from the sets and board
+                    deleteNumberFromSets(board, row, col);
+
+                    // Push the failed cell index to the stack for failsafe
+                    btStack.push(getFlatIndex(row, col));
+                }
+            }
+            if (!randomIndex.isEmpty()) {
+                rowCol = getUnflattenIndex(findRandomCell(randomIndex));
+            }
+            else {
+                // There was never a unique solution found, so we pop all the failed indices back into the pool
+                //StdOut.println("Failed to find a unique solution, adding failed indices back to the pool");
+                while (!btStack.isEmpty()) {
+                    randomIndex.add(btStack.pop());
+                }
+                //StdOut.format("randomIndex size: %d\n", randomIndex.size());
+                //break;
+            }
+        }
+        //printSudokuBoard(board);
+        return board;
+    }
+
+    // Function that returns a shuffled array list of the board indexes
+    private List<Integer> shuffleBoardHelper() {
+        List<Integer> result = new ArrayList<>();
+        for (int i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
+            result.add(i);
+        }
+        Collections.shuffle(result);
+        return result;
+    }
+
+    // Function to copy boards to different memory locations \\ Used to store the original state of the board before the solver
     private int[][] deepCopyBoard(int[][] original) {
         int[][] copy = new int[original.length][original[0].length];
         for (int i = 0; i < original.length; i++) {
@@ -313,8 +392,25 @@ public class SudokuSolver {
         return copy;
     }
 
+    // Function returns random cell from list of indices. Also removes the index from the list
+    private int findRandomCell(List<Integer> indices) {
+        Random rand = new Random();
+
+        // Gets a random index from the shuffled list
+        int index = rand.nextInt(indices.size());
+        int result = indices.get(index);
+
+        // Remove the index from the list // Linear time removal for shifting to the left
+        indices.remove(index);
+
+        return result;
+    }
+
+    // Function that returns a random possible answer for the index or it returns 0 if there is no possible answer
     private int findRandomAnswer(int row, int col) {
         Random rand = new Random();
+
+        // Make a list with all the possible answers for the cell
         List<Integer> possibleAnswers = new ArrayList<>();
         for (int i = 1; i <= BOARD_SIZE; i++) {
             if (!rowSets[row].contains(i) && !columnSets[col].contains(i) && !boxSets[getBoxIndex(row, col)].contains(i)) {
@@ -325,45 +421,14 @@ public class SudokuSolver {
         return possibleAnswers.get(rand.nextInt(possibleAnswers.size()));
     }
 
-    private void testingSolutionCounts() {
-        int [][] board = new int[][] {
-                {8, 0, 0, 0, 0, 9, 1, 0, 0},
-                {0, 9, 7, 0, 0, 1, 0, 5, 0},
-                {4, 0, 0, 2, 5, 0, 0, 7, 3},
-                {9, 0, 0, 0, 6, 3, 0, 8, 0},
-                {0, 7, 4, 0, 0, 0, 3, 6, 0},
-                {0, 8, 0, 4, 9, 0, 0, 0, 1},
-                {2, 4, 0, 0, 8, 5, 0, 0, 7},
-                {0, 3, 0, 9, 0, 0, 4, 1, 0},
-                {0, 0, 5, 3, 0, 0, 0, 0, 8}};
-        checkIfValidBoard(board);
-        int solution = countUniqueSolutions(board);
-        StdOut.format("Solutions: %d\n", solution);
-        board = new int[][] {
-                {0, 1, 0, 4, 0, 5, 0, 0, 0},
-                {9, 0, 3, 0, 0, 0, 8, 0, 0},
-                {4, 0, 0, 0, 7, 0, 0, 1, 3},
-                {0, 0, 4, 5, 6, 0, 3, 0, 0},
-                {1, 6, 0, 0, 0, 0, 0, 8, 5},
-                {0, 0, 5, 0, 8, 2, 6, 0, 0},
-                {6, 2, 0, 0, 5, 0, 0, 0, 8},
-                {0, 0, 1, 0, 0, 0, 5, 0, 2},
-                {0, 0, 0, 9, 0, 8, 0, 3, 0}};
-        checkIfValidBoard(board);
-        solution = countUniqueSolutions(board);
-        StdOut.format("Solutions: %d\n", solution);
-        //StdOut.println("Generating random unique board");
-        //generateRandomSolution();
-
-    }
-
     public static void main (String[] args) {
         SudokuSolver sudokuSolver = new SudokuSolver();
         sudokuSolver.initializeHashSets();
-        sudokuSolver.testingPuzzles();
-        sudokuSolver.testingCustomPuzzles();
+//        sudokuSolver.testingPuzzles();
+//        sudokuSolver.testingCustomPuzzles();
+//        sudokuSolver.testingSolutionCounts();
         // FINISHED EVERYTHING ABOVE | NOW TESTING GENERATION BELOW
-        sudokuSolver.testingSolutionCounts();
+        sudokuSolver.testGeneratingRandomPuzzle();
     }
 
     // Function that sends starting board and the answer to the test function
@@ -731,6 +796,97 @@ public class SudokuSolver {
             //StdOut.println("Caught NumberFormatException");
         }
     }
+
+    private void testingSolutionCounts() {
+        testSolutionCounts(new int[][] {
+                {5, 0, 0, 0, 0, 3, 0, 0, 0},
+                {0, 0, 9, 8, 0, 0, 0, 5, 3},
+                {0, 0, 0, 0, 2, 5, 0, 0, 0},
+                {0, 5, 2, 0, 1, 0, 0, 6, 0},
+                {0, 0, 0, 0, 0, 0, 9, 0, 2},
+                {0, 3, 0, 9, 0, 6, 0, 0, 7},
+                {0, 0, 0, 4, 7, 0, 0, 0, 0},
+                {0, 0, 0, 1, 0, 0, 0, 0, 0},
+                {7, 0, 0, 0, 0, 0, 0, 0, 9}
+        }, 0);
+        testSolutionCounts(new int[][] {
+                {0, 0, 0, 0, 6, 0, 1, 0, 0},
+                {0, 6, 0, 7, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {8, 0, 2, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 1, 0, 0, 0, 0, 9},
+                {0, 0, 0, 0, 0, 4, 0, 1, 0},
+                {2, 0, 0, 9, 4, 3, 0, 5, 8},
+                {0, 3, 7, 0, 0, 0, 0, 0, 4},
+                {9, 0, 8, 0, 0, 0, 0, 0, 0}
+        }, 0);
+        testSolutionCounts(new int[][] {
+                {8, 0, 0, 0, 0, 9, 1, 0, 0},
+                {0, 9, 7, 0, 0, 1, 0, 5, 0},
+                {4, 0, 0, 2, 5, 0, 0, 7, 3},
+                {9, 0, 0, 0, 6, 3, 0, 8, 0},
+                {0, 7, 4, 0, 0, 0, 3, 6, 0},
+                {0, 8, 0, 4, 9, 0, 0, 0, 1},
+                {2, 4, 0, 0, 8, 5, 0, 0, 7},
+                {0, 3, 0, 9, 0, 0, 4, 1, 0},
+                {0, 0, 5, 3, 0, 0, 0, 0, 8}
+        }, 1);
+        testSolutionCounts(new int[][] {
+                {0, 1, 0, 4, 0, 5, 0, 0, 0},
+                {9, 0, 3, 0, 0, 0, 8, 0, 0},
+                {4, 0, 0, 0, 7, 0, 0, 1, 3},
+                {0, 0, 4, 5, 6, 0, 3, 0, 0},
+                {1, 6, 0, 0, 0, 0, 0, 8, 5},
+                {0, 0, 5, 0, 8, 2, 6, 0, 0},
+                {6, 2, 0, 0, 5, 0, 0, 0, 8},
+                {0, 0, 1, 0, 0, 0, 5, 0, 2},
+                {0, 0, 0, 9, 0, 8, 0, 3, 0}
+        }, 1);
+        testSolutionCounts(new int[][] {
+                {0, 0, 8, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 3, 0},
+                {0, 7, 0, 4, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 2, 0, 0},
+                {0, 0, 6, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 1, 0},
+                {0, 2, 0, 0, 0, 0, 0, 0, 5},
+                {0, 0, 0, 0, 0, 0, 7, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 9, 0}
+        }, 2);
+        testSolutionCounts(new int[][] {
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                {0, 0, 0, 0, 0, 0, 0, 0, 0}
+        }, 2);
+        //int[][] board = generateRandomSolution();
+    }
+
+    private void testSolutionCounts(int[][] startBoard, int expectedSolutions) {
+        checkIfValidBoard(startBoard);
+        int solutions = countUniqueSolutions(startBoard);
+        if (solutions != expectedSolutions) {
+            StdOut.format("Failed Puzzle: Expecting (%d) solutions, Actual (%d) solutions", expectedSolutions, solutions);
+        }
+    }
+
+    private void testGeneratingRandomPuzzle() {
+        int[][] board = generateRandomPuzzle();
+        int solutions = countUniqueSolutions(board);
+        if (solutions != 1) {
+            StdOut.format("Failed Generating Puzzle: Expecting (%d) solutions, Actual (%d) solutions", 1, solutions);
+        }
+        int[][] startBoard = deepCopyBoard(board);
+        checkIfValidBoard(board);
+        solvePuzzle(board);
+        sudokuBoard = board;
+        testPuzzle(startBoard, sudokuBoard); // Redundant because I'm using the same solver for the solution
+    }
 }
 
 
@@ -875,53 +1031,4 @@ public class SudokuSolver {
 //        int temp = array[i];
 //        array[i] = array[j];
 //        array[j] = temp;
-//    }
-
-// Generates a random unique final board
-//    private void generateRandomSolution() {
-//        int[][] board = new int[BOARD_SIZE][BOARD_SIZE];
-//
-//        Stack<Integer> randomIndex = randomIndexStack();
-//
-//        int[] rowCol = getUnflattenIndex(randomIndex.pop());
-//        int row;
-//        int col;
-//        int solutionCount;
-//        int[][] startBoard;
-//        int popCount = 0;
-//
-//        while (true) {
-//            row = rowCol[0];
-//            col = rowCol[1];
-//            checkIfValidBoard(board);
-//
-//            int answer = findRandomAnswer(row, col);
-//
-//            if (answer > 0) {
-//                // Add solution to board
-//                board[row][col] = answer;
-//                // Add solution to sets
-//                rowSets[row].add(answer);
-//                columnSets[col].add(answer);
-//                boxSets[getBoxIndex(row, col)].add(answer);
-//
-//                startBoard = deepCopyBoard(board);
-//                StdOut.println("Start board");
-//                //printSudokuBoard(startBoard);
-//                solutionCount = countUniqueSolutions(board);
-//                StdOut.format("solutionCount: %d\n", solutionCount);
-//                board = deepCopyBoard(startBoard);
-//                if (solutionCount == 1) {
-//                    break;
-//                }
-//            }
-//            if (!randomIndex.isEmpty()) {
-//                rowCol = getUnflattenIndex(randomIndex.pop());
-//            }
-//            else {
-//                StdOut.println("Break");
-//                break;
-//            }
-//        }
-//        printSudokuBoard(board);
 //    }
