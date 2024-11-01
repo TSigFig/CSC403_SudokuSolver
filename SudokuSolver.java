@@ -237,6 +237,8 @@ public class SudokuSolver {
     }
 
     // Function return count of unique solutions for the puzzle
+    // THIS WORKS BUT CAN TAKE TOO LONG IN SPECIFIC RANDOM BOARDS WITH A LOT OF BACKTRACKING
+    // CAN I MAKE THIS MORE EFFICIENT??
     public int countUniqueSolutions(int[][] board) {
         // Reset stack
         backtrackStack = new Stack<>();
@@ -429,11 +431,11 @@ public class SudokuSolver {
         SudokuSolver sudokuSolver = new SudokuSolver();
         sudokuSolver.initializeHashSets();
         // Unit tests below
-        sudokuSolver.testingPuzzles();
-        sudokuSolver.testingCustomPuzzles();
-        sudokuSolver.testingSolutionCounts(); // This can take the longest depending on the puzzle it is testing // can be O(BOARD_SIZE ^ EMPTY CELLS) in time to solve
+        //sudokuSolver.testingPuzzles();
+        //sudokuSolver.testingCustomPuzzles();
+        //sudokuSolver.testingSolutionCounts(); // This can take the longest depending on the puzzle it is testing // can be O(2 * (BOARD_SIZE ^ EMPTY CELLS)) in time to solve
         // Below can take a long time if there is a bad sequence of random indexes that need to be solved using solutionCounts ^^^^ read above
-        //sudokuSolver.testGeneratingRandomPuzzle();
+        sudokuSolver.testGeneratingRandomPuzzle();
     }
 
     // Function that sends starting board and the answer to the test function
