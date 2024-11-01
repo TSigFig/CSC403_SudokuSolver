@@ -237,7 +237,7 @@ public class SudokuSolver {
     }
 
     // Function return count of unique solutions for the puzzle
-    // THIS WORKS BUT CAN TAKE TOO LONG IN SPECIFIC RANDOM BOARDS WITH A LOT OF BACKTRACKING
+    // THIS WORKS BUT CAN TAKE TOO LONG IN SPECIFIC SCENARIOS WITH A LOT OF BACKTRACKING
     // CAN I MAKE THIS MORE EFFICIENT??
     public int countUniqueSolutions(int[][] board) {
         // Reset stack
