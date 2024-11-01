@@ -45,9 +45,9 @@ public class SudokuSolver {
 
             // Reset value at position
             board[row][col] = 0;
-        }
 
-        // StdOut.format("Removed: %d from sudokuBoard[%d, %d]", delNum, row, col);
+            //StdOut.format("Removed: %d from sudokuBoard[%d, %d]\n", delNum, row, col);
+        }
     }
 
     // Declare and initialize Hash Sets for constraints
@@ -264,6 +264,8 @@ public class SudokuSolver {
                 // Push solution onto the stack
                 backtrackStack.push(new int[] {row, col});
 
+                //StdOut.format("Found answer (%d) at [%d, %d]\n", answer, row, col);
+
                 // Update rowCol to next empty cell position and reset startingNumber to 0
                 rowCol  = findNextZero(board, row, col);
                 startingNumber = 0;
@@ -287,6 +289,8 @@ public class SudokuSolver {
                 // findAnswer didn't find a possible solution
                 // Update board to 0 in case there was an answer there before
                 deleteNumberFromSets(board, row, col);
+
+                //StdOut.format("Did not find answer at [%d, %d]\n", row, col);
 
                 if (!backtrackStack.isEmpty()) {
                     // Get last solution position
@@ -341,7 +345,7 @@ public class SudokuSolver {
                 startBoard = deepCopyBoard(board);
 
                 solutionCount = countUniqueSolutions(board);
-                //StdOut.format("solutionCount: %d\n", solutionCount);
+                StdOut.format("solutionCount: %d\n", solutionCount);
 
                 // Reset the board back to the original state
                 board = deepCopyBoard(startBoard);
@@ -424,11 +428,12 @@ public class SudokuSolver {
     public static void main (String[] args) {
         SudokuSolver sudokuSolver = new SudokuSolver();
         sudokuSolver.initializeHashSets();
-//        sudokuSolver.testingPuzzles();
-//        sudokuSolver.testingCustomPuzzles();
-//        sudokuSolver.testingSolutionCounts();
-        // FINISHED EVERYTHING ABOVE | NOW TESTING GENERATION BELOW
-        sudokuSolver.testGeneratingRandomPuzzle();
+        // Unit tests below
+        sudokuSolver.testingPuzzles();
+        sudokuSolver.testingCustomPuzzles();
+        sudokuSolver.testingSolutionCounts(); // This can take the longest depending on the puzzle it is testing // can be O(BOARD_SIZE ^ EMPTY CELLS) in time to solve
+        // Below can take a long time if there is a bad sequence of random indexes that need to be solved using solutionCounts ^^^^ read above
+        //sudokuSolver.testGeneratingRandomPuzzle();
     }
 
     // Function that sends starting board and the answer to the test function
