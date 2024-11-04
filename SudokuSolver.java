@@ -1,19 +1,26 @@
 package TermProject;
-import stdlib.*;
+
 import algs13.Stack;
 
-import java.util.*;
+import stdlib.StdOut;
+import stdlib.StdIn;
+
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Arrays;
 
 public class SudokuSolver {
 
-    private final int BOX_SIZE = 3; // Length and width of the  box set
-    private final int BOARD_SIZE = BOX_SIZE * BOX_SIZE; // Length and width of the board
+    public static final int BOX_SIZE = 3; // Length and width of the  box set
+    public static final int BOARD_SIZE = BOX_SIZE * BOX_SIZE; // Length and width of the board
 
     private int[][] sudokuBoard;
     private HashSet<Integer>[] rowSets;
     private HashSet<Integer>[] columnSets;
     private HashSet<Integer>[] boxSets;
-    private Stack<int[]> backtrackStack;
 
     // Returns box index for boxSets from row and column index
     private int getBoxIndex(int row, int col) {
@@ -21,14 +28,14 @@ public class SudokuSolver {
     }
 
     // Returns 2d array index from flatten index
-    private int[] getUnflattenIndex(int index) {
+    private int[] getDeepIndex(int index) {
         int row = index / BOARD_SIZE;
         int col = index % BOARD_SIZE;
         return new int[] { row, col };
     }
 
     // Returns array index from 2d array position
-    private int getFlatIndex(int row, int col) {
+    private int getFlattenIndex(int row, int col) {
         return row * BOARD_SIZE + col;
     }
 
@@ -68,10 +75,10 @@ public class SudokuSolver {
         }
     }
 
-    // Puzzle solver function using backtracking method with a stack
+    // Function that solves the board using backtracking with a stack
     public void solvePuzzle(int[][] board) {
         // Reset stack
-        backtrackStack = new Stack<>();
+        Stack<int[]> backtrackStack = new Stack<>();
 
         // StdOut.println("Starting Puzzle");
 
@@ -117,7 +124,6 @@ public class SudokuSolver {
             }
         }
         //StdOut.println("Finished Puzzle");
-        //printFinalBoard();
     }
 
     // Returns valid answer for sudokuBoard[row, col]
@@ -149,6 +155,69 @@ public class SudokuSolver {
         }
         //StdOut.println("No more empty cells");
         return null; // CHECK FOR NULL AFTER RETURN
+    }
+
+    // Function returns random cell from list of indices. Also removes the index from the list
+    private int findRandomCell(List<Integer> indices) {
+        Random rand = new Random();
+
+        // Gets a random index from the shuffled list
+        int index = rand.nextInt(indices.size());
+        int result = indices.get(index);
+
+        // Remove the index from the list // Linear time removal for shifting to the left
+        indices.remove(index);
+
+        return result;
+    }
+
+    // Function that returns a random possible answer for the index or it returns 0 if there is no possible answer
+    private int findRandomAnswer(int row, int col) {
+        Random rand = new Random();
+
+        // Make a list with all the possible answers for the cell
+        List<Integer> possibleAnswers = new ArrayList<>();
+        for (int i = 1; i <= BOARD_SIZE; i++) {
+            if (!rowSets[row].contains(i) && !columnSets[col].contains(i) && !boxSets[getBoxIndex(row, col)].contains(i)) {
+                possibleAnswers.add(i);
+            }
+        }
+        if (possibleAnswers.isEmpty()) return 0;
+        return possibleAnswers.get(rand.nextInt(possibleAnswers.size()));
+    }
+
+    // Returns position of next index with the minimum remaining values for answers or returns the index with no answers, so it backtracks
+    private int[] findNextZeroMRV(int[][] board) {
+        int minimumRemainingValue = BOARD_SIZE + 1; // Always larger than the maximum possible answers
+        int[] mrvIndex = null;
+        for (int row = 0; row < BOARD_SIZE; row++) {
+            for (int col = 0; col < BOARD_SIZE; col++) {
+                if (board[row][col] == 0) {
+                    int answerCount = mrvHelper(row, col);
+                    if (answerCount == 0) {
+                        // Return index of board where there is no answer, so it instantly backtracks
+                        return new int[] { row, col };
+                    }
+                    if (answerCount < minimumRemainingValue) {
+                        minimumRemainingValue = answerCount;
+                        mrvIndex = new int[] {row, col};
+                    }
+                }
+            }
+        }
+        // Returns null when there is no more empty indices or cells
+        return mrvIndex;
+    }
+
+    // Helper function to return the count of possible answers for an index
+    private int mrvHelper(int row, int col) {
+        int count = 0;
+        for (int i = 1; i <= BOARD_SIZE; i++) {
+            if (!rowSets[row].contains(i) && !columnSets[col].contains(i) && !boxSets[getBoxIndex(row, col)].contains(i)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     // Checks if starting board is valid and follows the constraints
@@ -236,15 +305,13 @@ public class SudokuSolver {
         }
     }
 
-    // Function return count of unique solutions for the puzzle
-    // THIS WORKS BUT CAN TAKE TOO LONG IN SPECIFIC SCENARIOS WITH A LOT OF BACKTRACKING
-    // CAN I MAKE THIS MORE EFFICIENT??
-    public int countUniqueSolutions(int[][] board) {
+    // Function returns the count of unique solutions for the puzzle, capped at 2
+    private int countUniqueSolutions(int[][] board) {
         // Reset stack
-        backtrackStack = new Stack<>();
+        Stack<int[]> backtrackStack = new Stack<>();
 
         // Initialize local position and starting number outside of while loop
-        int[] rowCol = findNextZero(board,0, 0);
+        int[] rowCol = findNextZeroMRV(board);
         int startingNumber = 0;
         int solutionCount = 0;
         int row;
@@ -266,10 +333,8 @@ public class SudokuSolver {
                 // Push solution onto the stack
                 backtrackStack.push(new int[] {row, col});
 
-                //StdOut.format("Found answer (%d) at [%d, %d]\n", answer, row, col);
-
-                // Update rowCol to next empty cell position and reset startingNumber to 0
-                rowCol  = findNextZero(board, row, col);
+                // Update rowCol to next mrv cell position and reset startingNumber to 0
+                rowCol  = findNextZeroMRV(board);
                 startingNumber = 0;
 
                 // Check if puzzle is solved
@@ -311,7 +376,7 @@ public class SudokuSolver {
     }
 
     // Generates a random unique starting board
-    private int[][] generateRandomPuzzle() {
+    public int[][] generateRandomPuzzle() {
         // Initialize and fill the board with zeroes
         int[][] board = new int[BOARD_SIZE][BOARD_SIZE];
 
@@ -320,7 +385,7 @@ public class SudokuSolver {
 
         // Random shuffled list all cells on a board
         List<Integer> randomIndex = shuffleBoardHelper();
-        int[] rowCol = getUnflattenIndex(findRandomCell(randomIndex));
+        int[] rowCol = getDeepIndex(findRandomCell(randomIndex));
         int row;
         int col;
         int solutionCount;
@@ -347,7 +412,7 @@ public class SudokuSolver {
                 startBoard = deepCopyBoard(board);
 
                 solutionCount = countUniqueSolutions(board);
-                StdOut.format("solutionCount: %d\n", solutionCount);
+                //StdOut.format("solutionCount: %d\n", solutionCount);
 
                 // Reset the board back to the original state
                 board = deepCopyBoard(startBoard);
@@ -359,11 +424,11 @@ public class SudokuSolver {
                     deleteNumberFromSets(board, row, col);
 
                     // Push the failed cell index to the stack for failsafe
-                    btStack.push(getFlatIndex(row, col));
+                    btStack.push(getFlattenIndex(row, col));
                 }
             }
             if (!randomIndex.isEmpty()) {
-                rowCol = getUnflattenIndex(findRandomCell(randomIndex));
+                rowCol = getDeepIndex(findRandomCell(randomIndex));
             }
             else {
                 // There was never a unique solution found, so we pop all the failed indices back into the pool
@@ -372,10 +437,8 @@ public class SudokuSolver {
                     randomIndex.add(btStack.pop());
                 }
                 //StdOut.format("randomIndex size: %d\n", randomIndex.size());
-                //break;
             }
         }
-        //printSudokuBoard(board);
         return board;
     }
 
@@ -398,48 +461,21 @@ public class SudokuSolver {
         return copy;
     }
 
-    // Function returns random cell from list of indices. Also removes the index from the list
-    private int findRandomCell(List<Integer> indices) {
-        Random rand = new Random();
-
-        // Gets a random index from the shuffled list
-        int index = rand.nextInt(indices.size());
-        int result = indices.get(index);
-
-        // Remove the index from the list // Linear time removal for shifting to the left
-        indices.remove(index);
-
-        return result;
-    }
-
-    // Function that returns a random possible answer for the index or it returns 0 if there is no possible answer
-    private int findRandomAnswer(int row, int col) {
-        Random rand = new Random();
-
-        // Make a list with all the possible answers for the cell
-        List<Integer> possibleAnswers = new ArrayList<>();
-        for (int i = 1; i <= BOARD_SIZE; i++) {
-            if (!rowSets[row].contains(i) && !columnSets[col].contains(i) && !boxSets[getBoxIndex(row, col)].contains(i)) {
-                possibleAnswers.add(i);
-            }
-        }
-        if (possibleAnswers.isEmpty()) return 0;
-        return possibleAnswers.get(rand.nextInt(possibleAnswers.size()));
-    }
 
     public static void main (String[] args) {
         SudokuSolver sudokuSolver = new SudokuSolver();
         sudokuSolver.initializeHashSets();
         // Unit tests below
-        //sudokuSolver.testingPuzzles();
-        //sudokuSolver.testingCustomPuzzles();
-        //sudokuSolver.testingSolutionCounts(); // This can take the longest depending on the puzzle it is testing // can be O(2 * (BOARD_SIZE ^ EMPTY CELLS)) in time to solve
+        sudokuSolver.testingPuzzles();
+        sudokuSolver.testingCustomPuzzles();
+        sudokuSolver.testingSolutionCounts(); // This can take the longest depending on the puzzle it is testing // can be O(2 * (BOARD_SIZE ^ EMPTY CELLS)) in time to solve
         // Below can take a long time if there is a bad sequence of random indexes that need to be solved using solutionCounts ^^^^ read above
+        // ^^^ It's better now with MRV
         sudokuSolver.testGeneratingRandomPuzzle();
     }
 
     // Function that sends starting board and the answer to the test function
-    public void testingPuzzles() {
+    private void testingPuzzles() {
         // 3 easy puzzles
         testPuzzle(new int[][] {
                 {8, 0, 0, 0, 0, 9, 1, 0, 0},
@@ -680,7 +716,6 @@ public class SudokuSolver {
     // Function that takes the starting sudoku board and checks if my application gets the right answer. Print's if it fails
     private void testPuzzle(int[][] startBoard, int[][] expectedBoard) {
         checkIfValidBoard(startBoard);
-        //addBoardToHashSets(startBoard);
         solvePuzzle(startBoard);
         sudokuBoard = startBoard;
         if (!Arrays.deepEquals(expectedBoard, sudokuBoard)) {
@@ -700,7 +735,7 @@ public class SudokuSolver {
     }
 
     // Function that tests strings as the starting board for custom puzzles
-    public void testingCustomPuzzles() {
+    private void testingCustomPuzzles() {
         // 1 easy puzzle
         testCustomStringPuzzle(new String[][] {
                 {"8", "0", "0", "0", "0", "9", "1", "0", "0"},
