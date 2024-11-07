@@ -1,11 +1,18 @@
 package TermProject;
 
 import algs13.Stack; // Used for backtracking
+import java.util.HashSet; // Used for constraints
 
 import stdlib.StdOut;
 import stdlib.StdIn;
 
-import java.util.*;
+// Used for random board generation
+import java.util.Random;
+import java.util.Collections;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
+
 
 public class SudokuSolver {
 
