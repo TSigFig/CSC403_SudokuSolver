@@ -54,24 +54,6 @@ public class SudokuSolver {
         return row * BOARD_SIZE + col;
     }
 
-    // Deletes number at sudokuBoard[row, col] from sets and resets board to 0
-    private void deleteNumberFromSets(int[][] board, int row, int col) {
-        // Get value at position
-        int delNum = board[row][col];
-
-        if (delNum > 0) {
-            // Remove value from sets
-            rowSets[row].remove(delNum);
-            columnSets[col].remove(delNum);
-            boxSets[getBoxIndex(row, col)].remove(delNum);
-
-            // Reset value at position
-            board[row][col] = 0;
-
-            //StdOut.format("Removed: %d from sudokuBoard[%d, %d]\n", delNum, row, col);
-        }
-    }
-
     // Declare and initialize Hash Sets for constraints
     private void initializeHashSets() {
         // Initialize hash sets for constraints
@@ -87,62 +69,6 @@ public class SudokuSolver {
             rowSets[i] = new HashSet<>();
             columnSets[i] = new HashSet<>();
             boxSets[i] = new HashSet<>();
-        }
-    }
-
-    // Function that solves the board using backtracking with a stack
-    private void solveBoard(int[][] board) {
-        // Reset stack
-        Stack<int[]> backtrackStack = new Stack<>();
-
-        // StdOut.println("Starting Puzzle");
-
-        // Initialize local position and starting number outside of while loop
-        int[] rowCol = findNextZero(board,0, 0);
-        int startingNumber = 0;
-        int row;
-        int col;
-
-        while (rowCol != null) {
-            row = rowCol[0];
-            col = rowCol[1];
-            // Find answer for empty cell
-            int answer = findAnswer(row, col, startingNumber);
-
-            if (answer > 0) {
-                // Update solution to the board
-                board[row][col] = answer;
-                // Add solution to sets
-                rowSets[row].add(answer);
-                columnSets[col].add(answer);
-                boxSets[getBoxIndex(row, col)].add(answer);
-                // Push solution onto the stack
-                backtrackStack.push(new int[] {row, col});
-
-                // Update rowCol to next empty cell position and reset startingNumber to 0
-                rowCol  = findNextZero(board, row, col);
-                startingNumber = 0;
-            }
-            else if (answer == 0) {
-                // findAnswer didn't find a possible solution
-                // Update board to 0 in case there was an answer there before
-                if (board[row][col] != 0) {
-                    deleteNumberFromSets(board, row, col);
-                }
-
-                // Check if the stack is not empty // If empty, means it didn't find a solution the puzzle and breaks
-                if (!backtrackStack.isEmpty()) {
-                    // Get last solution position
-                    rowCol = backtrackStack.pop();
-                    // Update startingNumber to last answer
-                    startingNumber = board[rowCol[0]][rowCol[1]];
-                    // Remove last solution from sets
-                    deleteNumberFromSets(board, rowCol[0], rowCol[1]);
-                }
-                else {
-                    break;
-                }
-            }
         }
     }
 
@@ -238,6 +164,80 @@ public class SudokuSolver {
             }
         }
         return count;
+    }
+
+    // Deletes number at sudokuBoard[row, col] from sets and resets board to 0
+    private void deleteNumberFromSets(int[][] board, int row, int col) {
+        // Get value at position
+        int delNum = board[row][col];
+
+        if (delNum > 0) {
+            // Remove value from sets
+            rowSets[row].remove(delNum);
+            columnSets[col].remove(delNum);
+            boxSets[getBoxIndex(row, col)].remove(delNum);
+
+            // Reset value at position
+            board[row][col] = 0;
+
+            //StdOut.format("Removed: %d from sudokuBoard[%d, %d]\n", delNum, row, col);
+        }
+    }
+
+    // Function that solves the board using backtracking with a stack
+    private void solveBoard(int[][] board) {
+        // Reset stack
+        Stack<int[]> backtrackStack = new Stack<>();
+
+        // StdOut.println("Starting Puzzle");
+
+        // Initialize local position and starting number outside of while loop
+        int[] rowCol = findNextZero(board,0, 0);
+        int startingNumber = 0;
+        int row;
+        int col;
+
+        while (rowCol != null) {
+            row = rowCol[0];
+            col = rowCol[1];
+            // Find answer for empty cell
+            int answer = findAnswer(row, col, startingNumber);
+
+            if (answer > 0) {
+                // Update solution to the board
+                board[row][col] = answer;
+                // Add solution to sets
+                rowSets[row].add(answer);
+                columnSets[col].add(answer);
+                boxSets[getBoxIndex(row, col)].add(answer);
+                // Push solution onto the stack
+                backtrackStack.push(new int[] {row, col});
+
+                // Update rowCol to next empty cell position and reset startingNumber to 0
+                rowCol  = findNextZero(board, row, col);
+                startingNumber = 0;
+            }
+            else if (answer == 0) {
+                // findAnswer didn't find a possible solution
+                // Update board to 0 in case there was an answer there before
+                if (board[row][col] != 0) {
+                    deleteNumberFromSets(board, row, col);
+                }
+
+                // Check if the stack is not empty // If empty, means it didn't find a solution the puzzle and breaks
+                if (!backtrackStack.isEmpty()) {
+                    // Get last solution position
+                    rowCol = backtrackStack.pop();
+                    // Update startingNumber to last answer
+                    startingNumber = board[rowCol[0]][rowCol[1]];
+                    // Remove last solution from sets
+                    deleteNumberFromSets(board, rowCol[0], rowCol[1]);
+                }
+                else {
+                    break;
+                }
+            }
+        }
     }
 
     // Checks if starting board is valid and follows the constraints
@@ -342,8 +342,7 @@ public class SudokuSolver {
 
 
     // Function that takes custom user puzzle from input
-    // I WANT TO FIND A BETTER WAY OF HANDLING THIS
-    public String[][] createUserSudokuPuzzle() {
+    public int[][] createUserSudokuPuzzle() {
         StdOut.println("For copy and paste help:");
         StdOut.println(
                 "000000000\n000000000\n000000000\n000000000\n000000000\n000000000\n000000000\n000000000\n000000000");
@@ -358,7 +357,7 @@ public class SudokuSolver {
             }
             StdOut.println();
         }
-        return stringBoard;
+        return parseCustomBoard(stringBoard);
     }
 
     // Print full sudokuBoard
@@ -528,27 +527,24 @@ public class SudokuSolver {
         return copy;
     }
 
-
     public static void main (String[] args) {
-        //SudokuSolver sudokuSolver = new SudokuSolver();
-        //sudokuSolver.initializeHashSets();
+        SudokuSolver sudokuSolver = new SudokuSolver();
+        sudokuSolver.initializeHashSets();
         // Unit tests below
-        //sudokuSolver.testingPuzzles();
-        //sudokuSolver.testingCustomPuzzles();
-        //sudokuSolver.testingSolutionCounts(); // This can take the longest depending on the puzzle it is testing // can be O(2 * (BOARD_SIZE ^ EMPTY CELLS)) in time to solve
-        // Below can take a long time if there is a bad sequence of random indexes that need to be solved using solutionCounts ^^^^ read above
-        // ^^^ It's better now with MRV
-        //sudokuSolver.testGeneratingRandomPuzzle();
-
-        //int[][] randomBoard = sudokuSolver.generateRandomPuzzle();
-        //sudokuSolver.printSudokuBoard(randomBoard);
-        //sudokuSolver.solvePuzzle(randomBoard);
+        sudokuSolver.testPuzzles();
+        sudokuSolver.testCustomPuzzles();
+        sudokuSolver.testSolutionCounts();
+        sudokuSolver.testGeneratingRandomPuzzle();
+//
+//        int[][] randomBoard = sudokuSolver.generateRandomPuzzle();
+//        sudokuSolver.printSudokuBoard(randomBoard);
+//        sudokuSolver.solvePuzzle(randomBoard);
     }
 
     // Function that sends starting board and the answer to the test function
-    private void testingPuzzles() {
+    private void testPuzzles() {
         // 3 easy puzzles
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {8, 0, 0, 0, 0, 9, 1, 0, 0},
                 {0, 9, 7, 0, 0, 1, 0, 5, 0},
                 {4, 0, 0, 2, 5, 0, 0, 7, 3},
@@ -569,7 +565,7 @@ public class SudokuSolver {
                 {7, 3, 8, 9, 2, 6, 4, 1, 5},
                 {1, 6, 5, 3, 7, 4, 2, 9, 8}
         }); // Puzzle (1) in sudoku book
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {0, 0, 4, 0, 1, 0, 0, 3, 0},
                 {6, 0, 0, 0, 0, 0, 8, 1, 0},
                 {0, 0, 1, 8, 6, 0, 0, 9, 0},
@@ -590,7 +586,7 @@ public class SudokuSolver {
                 {4, 6, 5, 1, 2, 7, 9, 8, 3},
                 {7, 3, 8, 6, 9, 5, 2, 4, 1}
         }); // Puzzle (2) in sudoku book
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {6, 0, 0, 0, 0, 0, 9, 2, 0},
                 {2, 0, 0, 5, 0, 3, 0, 8, 0},
                 {9, 1, 8, 6, 0, 0, 7, 0, 0},
@@ -613,7 +609,7 @@ public class SudokuSolver {
         }); // Puzzle (3) in sudoku book
 
         // 3 medium puzzles
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {0, 0, 6, 0, 9, 0, 0, 0, 3},
                 {9, 0, 0, 0, 0, 3, 0, 2, 8},
                 {0, 1, 0, 0, 2, 8, 0, 0, 0},
@@ -634,7 +630,7 @@ public class SudokuSolver {
                 {8, 2, 1, 5, 3, 7, 4, 6, 9},
                 {4, 5, 9, 1, 6, 2, 8, 3, 7}
         }); // Puzzle (42) in sudoku book
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {0, 0, 2, 6, 1, 0, 0, 0, 9},
                 {0, 4, 8, 0, 0, 0, 0, 5, 0},
                 {0, 1, 0, 0, 0, 5, 2, 0, 0},
@@ -655,7 +651,7 @@ public class SudokuSolver {
                 {4, 2, 7, 1, 9, 8, 6, 3, 5},
                 {6, 8, 5, 4, 2, 3, 7, 9, 1}
         }); // Puzzle (44) in sudoku book
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {0, 1, 0, 4, 0, 5, 0, 0, 0},
                 {9, 0, 3, 0, 0, 0, 8, 0, 0},
                 {4, 0, 0, 0, 7, 0, 0, 1, 3},
@@ -678,7 +674,7 @@ public class SudokuSolver {
         }); // Puzzle (48) in sudoku book
 
         // 3 hard puzzles
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {0, 1, 0, 0, 0, 4, 8, 0, 0},
                 {0, 0, 0, 5, 0, 9, 1, 2, 0},
                 {2, 0, 8, 0, 6, 0, 0, 0, 4},
@@ -699,7 +695,7 @@ public class SudokuSolver {
                 {1, 8, 2, 9, 4, 5, 7, 6, 3},
                 {6, 7, 4, 3, 1, 8, 2, 9, 5}
         }); // Puzzle (163) in sudoku book
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {0, 0, 0, 0, 4, 0, 0, 0, 5},
                 {6, 0, 9, 0, 0, 0, 0, 8, 0},
                 {0, 0, 0, 9, 0, 8, 3, 0, 0},
@@ -720,7 +716,7 @@ public class SudokuSolver {
                 {5, 4, 8, 6, 9, 7, 2, 3, 1},
                 {7, 2, 1, 4, 8, 3, 6, 5, 9}
         }); // Puzzle (164) in sudoku book
-        testPuzzle(new int[][] {
+        testPuzzleHelper(new int[][] {
                 {0, 6, 0, 2, 0, 0, 0, 0, 5},
                 {0, 0, 9, 0, 0, 3, 8, 0, 0},
                 {7, 0, 0, 0, 0, 0, 0, 9, 0},
@@ -742,7 +738,7 @@ public class SudokuSolver {
                 {4, 3, 5, 6, 9, 1, 2, 7, 8}
         }); // Puzzle (166) in sudoku book
 
-        testNoSolutionPuzzle(new int[][] {
+        testNoSolutionPuzzleHelper(new int[][] {
                 {5, 0, 0, 0, 0, 3, 0, 0, 0},
                 {0, 0, 9, 8, 0, 0, 0, 5, 3},
                 {0, 0, 0, 0, 2, 5, 0, 0, 0},
@@ -753,7 +749,7 @@ public class SudokuSolver {
                 {0, 0, 0, 1, 0, 0, 0, 0, 0},
                 {7, 0, 0, 0, 0, 0, 0, 0, 9}
         }); // Puzzle with no solution
-        testNoSolutionPuzzle(new int[][] {
+        testNoSolutionPuzzleHelper(new int[][] {
                 {0, 0, 0, 0, 6, 0, 1, 0, 0},
                 {0, 6, 0, 7, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -766,13 +762,13 @@ public class SudokuSolver {
         }); // Puzzle with no solution
 
         // 4 invalid puzzles
-        testInvalidPuzzle(new int[][] {
+        testInvalidPuzzleHelper(new int[][] {
                 {0, 6, 0, 2, 0, 0, 0, 0, 5},
                 {0, 0, 9, 0, 0, 3, 8, 0, 0},
                 {7, 0, 0, 0, 0, 0, 0, 9, 0},
                 {0, 0, 3, 1, 0, 0, 4, 0, 7}
         }); // Not enough rows
-        testInvalidPuzzle(new int[][] {
+        testInvalidPuzzleHelper(new int[][] {
                 {0, 6, 0, 2, 0, 0, 0, 0, 5},
                 {0, 0, 9, 0, 0, 3, 8, 0, 0},
                 {7, 0, 0, 0, 0, 0, 0, 9, 0},
@@ -783,7 +779,7 @@ public class SudokuSolver {
                 {0, 0, 6, 4, 0, 0, 9, 0, 0},
                 {4, 0, 0, 0, 0, 1, 0, 7}
         }); // Not enough columns
-        testInvalidPuzzle(new int[][] {
+        testInvalidPuzzleHelper(new int[][] {
                 {0, 6, 0, 2, 0, 0, 0, 0, 5},
                 {0, 0, 9, 0, 0, 3, 8, 0, 0},
                 {7, 0, 0, 0, 0, 0, 0, 9, 0},
@@ -794,7 +790,7 @@ public class SudokuSolver {
                 {0, 0, 6, 4, 0, 0, 9, 0, 0},
                 {4, 0, 0, 0, 0, 1, 0, 7, 0}
         }); // Number out of range > BOARD_SIZE
-        testInvalidPuzzle(new int[][] {
+        testInvalidPuzzleHelper(new int[][] {
                 {0, 6, 0, 2, 0, 0, 0, 0, 5},
                 {0, 0, 9, 0, 0, 3, 8, 0, 0},
                 {7, 0, 0, 0, 0, 0, 0, 9, 0},
@@ -808,7 +804,7 @@ public class SudokuSolver {
     }
 
     // Function that takes the starting sudoku board and checks if my application gets the right answer. Print's if it fails
-    private void testPuzzle(int[][] startBoard, int[][] expectedBoard) {
+    private void testPuzzleHelper(int[][] startBoard, int[][] expectedBoard) {
         checkIfValidStartBoard(startBoard);
         solveBoard(startBoard);
         boolean isValid = checkIfValidSolution(startBoard);
@@ -823,7 +819,7 @@ public class SudokuSolver {
     }
 
     // Function that tests valid starting boards, but has no solution
-    private void testNoSolutionPuzzle(int[][] startBoard) {
+    private void testNoSolutionPuzzleHelper(int[][] startBoard) {
         checkIfValidSolution(startBoard);
         solveBoard(startBoard);
         boolean isValid = checkIfValidSolution(startBoard);
@@ -833,7 +829,7 @@ public class SudokuSolver {
     }
 
     // Function that tests invalid starting boards, catches IllegalArgumentException
-    private void testInvalidPuzzle(int[][] startBoard) {
+    private void testInvalidPuzzleHelper(int[][] startBoard) {
         try {
             checkIfValidStartBoard(startBoard);
             StdOut.println("Failed Puzzle: Did not catch IllegalArgumentException");
@@ -844,9 +840,9 @@ public class SudokuSolver {
     }
 
     // Function that tests strings as the starting board for custom puzzles
-    private void testingCustomPuzzles() {
+    private void testCustomPuzzles() {
         // 1 easy puzzle
-        testCustomStringPuzzle(new String[][] {
+        testCustomStringPuzzleHelper(new String[][] {
                 {"8", "0", "0", "0", "0", "9", "1", "0", "0"},
                 {"0", "9", "7", "0", "0", "1", "0", "5", "0"},
                 {"4", "0", "0", "2", "5", "0", "0", "7", "3"},
@@ -869,7 +865,7 @@ public class SudokuSolver {
         }); // Puzzle (1) in sudoku book
 
         // 1 medium puzzle
-        testCustomStringPuzzle(new String[][] {
+        testCustomStringPuzzleHelper(new String[][] {
                 {"0", "0", "6", "0", "9", "0", "0", "0", "3"},
                 {"9", "0", "0", "0", "0", "3", "0", "2", "8"},
                 {"0", "1", "0", "0", "2", "8", "0", "0", "0"},
@@ -892,7 +888,7 @@ public class SudokuSolver {
         }); // Puzzle (42) in sudoku book
 
         // 1 hard puzzle
-        testCustomStringPuzzle(new String[][] {
+        testCustomStringPuzzleHelper(new String[][] {
                 {"0", "6", "0", "2", "0", "0", "0", "0", "5"},
                 {"0", "0", "9", "0", "0", "3", "8", "0", "0"},
                 {"7", "0", "0", "0", "0", "0", "0", "9", "0"},
@@ -914,7 +910,7 @@ public class SudokuSolver {
                 {4, 3, 5, 6, 9, 1, 2, 7, 8}
         }); // Puzzle (166) in sudoku book
 
-        testInvalidCustomPuzzle(new String[][] {
+        testInvalidCustomPuzzleHelper(new String[][] {
                 {"0", "6", "0", "2", "0", "0", "0", "0", "5"},
                 {"0", "0", "9", "0", "0", "3", "8", "0", "0"},
                 {"7", "0", "0", "0", "0", "0", "0", "9", "0"},
@@ -928,7 +924,7 @@ public class SudokuSolver {
     }
 
     // Function that tests custom string boards and checks if it gets the expected answer
-    private void testCustomStringPuzzle(String[][] input, int[][] expectedBoard) {
+    private void testCustomStringPuzzleHelper(String[][] input, int[][] expectedBoard) {
         int[][] parsedInput = parseCustomBoard(input);
         checkIfValidStartBoard(parsedInput);
         solveBoard(parsedInput);
@@ -943,7 +939,7 @@ public class SudokuSolver {
         }
     }
 
-    private void testInvalidCustomPuzzle(String[][] input) {
+    private void testInvalidCustomPuzzleHelper(String[][] input) {
         try {
             int[][] parsedInput = parseCustomBoard(input);
             StdOut.println("Failed Puzzle: Did not catch NumberFormatException");
@@ -953,8 +949,8 @@ public class SudokuSolver {
         }
     }
 
-    private void testingSolutionCounts() {
-        testSolutionCounts(new int[][] {
+    private void testSolutionCounts() {
+        testSolutionCountsHelper(new int[][] {
                 {5, 0, 0, 0, 0, 3, 0, 0, 0},
                 {0, 0, 9, 8, 0, 0, 0, 5, 3},
                 {0, 0, 0, 0, 2, 5, 0, 0, 0},
@@ -965,7 +961,7 @@ public class SudokuSolver {
                 {0, 0, 0, 1, 0, 0, 0, 0, 0},
                 {7, 0, 0, 0, 0, 0, 0, 0, 9}
         }, 0);
-        testSolutionCounts(new int[][] {
+        testSolutionCountsHelper(new int[][] {
                 {0, 0, 0, 0, 6, 0, 1, 0, 0},
                 {0, 6, 0, 7, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -976,7 +972,7 @@ public class SudokuSolver {
                 {0, 3, 7, 0, 0, 0, 0, 0, 4},
                 {9, 0, 8, 0, 0, 0, 0, 0, 0}
         }, 0);
-        testSolutionCounts(new int[][] {
+        testSolutionCountsHelper(new int[][] {
                 {8, 0, 0, 0, 0, 9, 1, 0, 0},
                 {0, 9, 7, 0, 0, 1, 0, 5, 0},
                 {4, 0, 0, 2, 5, 0, 0, 7, 3},
@@ -987,7 +983,7 @@ public class SudokuSolver {
                 {0, 3, 0, 9, 0, 0, 4, 1, 0},
                 {0, 0, 5, 3, 0, 0, 0, 0, 8}
         }, 1);
-        testSolutionCounts(new int[][] {
+        testSolutionCountsHelper(new int[][] {
                 {0, 1, 0, 4, 0, 5, 0, 0, 0},
                 {9, 0, 3, 0, 0, 0, 8, 0, 0},
                 {4, 0, 0, 0, 7, 0, 0, 1, 3},
@@ -998,7 +994,7 @@ public class SudokuSolver {
                 {0, 0, 1, 0, 0, 0, 5, 0, 2},
                 {0, 0, 0, 9, 0, 8, 0, 3, 0}
         }, 1);
-        testSolutionCounts(new int[][] {
+        testSolutionCountsHelper(new int[][] {
                 {0, 0, 8, 0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0, 0, 3, 0},
                 {0, 7, 0, 4, 0, 0, 0, 0, 0},
@@ -1009,7 +1005,7 @@ public class SudokuSolver {
                 {0, 0, 0, 0, 0, 0, 7, 0, 0},
                 {0, 0, 0, 0, 0, 0, 0, 9, 0}
         }, 2);
-        testSolutionCounts(new int[][] {
+        testSolutionCountsHelper(new int[][] {
                 {0, 0, 0, 0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0, 0, 0, 0},
                 {0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -1023,7 +1019,7 @@ public class SudokuSolver {
         //int[][] board = generateRandomSolution();
     }
 
-    private void testSolutionCounts(int[][] startBoard, int expectedSolutions) {
+    private void testSolutionCountsHelper(int[][] startBoard, int expectedSolutions) {
         checkIfValidStartBoard(startBoard);
         int solutions = countUniqueSolutions(startBoard);
         if (solutions != expectedSolutions) {
@@ -1043,7 +1039,7 @@ public class SudokuSolver {
         boolean isValid = checkIfValidSolution(board);
         if (isValid) {
             sudokuBoard = board;
-            testPuzzle(startBoard, sudokuBoard); // Redundant because I'm using the same solver for the solution
+            testPuzzleHelper(startBoard, sudokuBoard); // Redundant because I'm using the same solver for the solution
         } else {
             StdOut.format("Failed is valid check: Actual (%s)\n", Arrays.deepToString(board));
         }
